@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Upload Game</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: #fff;
+      padding: 30px;
+    }
+    form {
+      background: #222;
+      padding: 20px;
+      border-radius: 10px;
+      width: 400px;
+    }
+    input, textarea {
+      width: 100%;
+      margin: 10px 0;
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+    }
+    button {
+      background: gold;
+      color: #000;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Upload Game to Home</h2>
+
+  <form id="uploadForm" enctype="multipart/form-data">
+    <label>Game Title</label>
+    <input type="text" name="title" required>
+
+    <label>Game Description</label>
+    <textarea name="desc" required></textarea>
+
+    <label>Image</label>
+    <input type="file" name="image" accept="image/*" required>
+
+    <button type="submit">Upload</button>
+  </form>
+
+  <script>
+    document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const formData = new FormData(this);
+
+      try {
+        const res = await fetch('/api/upload/home', {
+          method: 'POST',
+          body: formData
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          alert('✅ Upload success!');
+        } else {
+          alert('❌ Upload failed: ' + data.message);
+        }
+      } catch (err) {
+        alert('❌ Upload error: ' + err.message);
+      }
+    });
+  </script>
+</body>
+</html>
