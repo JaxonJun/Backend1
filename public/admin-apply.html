@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>报名列表管理</title>
+  <link rel="stylesheet" href="/public/admin.css">
+  <style>
+    body {
+      background: #111;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      padding: 2rem;
+    }
+    h1 {
+      color: yellow;
+      text-align: center;
+    }
+    .search-bar {
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+    .search-bar input {
+      padding: 6px;
+      width: 250px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #222;
+    }
+    th, td {
+      padding: 10px;
+      border: 1px solid #444;
+      text-align: left;
+    }
+    th {
+      background-color: #333;
+      color: yellow;
+    }
+    tr:nth-child(even) {
+      background-color: #1a1a1a;
+    }
+    button.delete-btn {
+      background: red;
+      color: #fff;
+      border: none;
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+    button.export-btn {
+      float: right;
+      margin-bottom: 1rem;
+      background: green;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>报名列表管理</h1>
+
+  <div class="search-bar">
+    <input type="text" id="searchInput" placeholder="搜索姓名 / 邮箱" oninput="filterTable()">
+    <button class="export-btn" onclick="exportCSV()">导出 CSV</button>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>姓名</th>
+        <th>邮箱</th>
+        <th>提交时间</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody id="applyList">
+      <tr><td colspan="4">加载中...</td></tr>
+    </tbody>
+  </table>
+
+  <script>
+    async function fetchData() {
+      const res = await fetch('/api/apply');
+      const data = await res.json();
+      window.allApply = data;
+      renderTable(data);
+    }
+
+    function renderTable(data) {
+      const tbody = document.getElementById('applyList');
+      tbody.innerHTML = '';
+      data.forEach((item, index) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${item.name}</td>
+          <td>${item.email}</td>
+          <td>${new Date(item.time).toLocaleString()}</td>
+          <td><button class="delete-btn" onclick="deleteEntry(${index})">删除</button></td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function filterTable() {
+      const query = document.getElementById('searchInput').value.toLowerCase();
+      const filtered = window.allApply.filter(item =>
+        item.name.toLowerCase().includes(query) ||
+        item.email.toLowerCase().includes(query)
+      );
+      renderTable(filtered);
+    }
+
+    async function deleteEntry(index) {
+      if (!confirm('确定删除记录吗？')) return;
+      const res = await fetch(`/api/apply/${index}`, { method: 'DELETE' });
+      const json = await res.json();
+      if (json.success) fetchData();
+    }
+
+    function exportCSV() {
+      const csv = ["Name,Email,Time"];
+      window.allApply.forEach(item => {
+        const row = `${item.name},${item.email},${item.time}`;
+        csv.push(row);
+      });
+      const blob = new Blob([csv.join("\n")], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'apply-data.csv';
+      a.click();
+    }
+
+    fetchData();
+  </script>
+</body>
+</html>

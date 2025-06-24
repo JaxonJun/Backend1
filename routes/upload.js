@@ -1,58 +1,66 @@
-const express = require('express');
-const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
-const router = express.Router();
-
+const express = require('express');
+const multer = require('multer');
 const { v2: cloudinary } = require('cloudinary');
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
-// Cloudinary 配置
+const router = express.Router();
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
+
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// 设置 Cloudinary 存储策略
-const storage = new CloudinaryStorage({
-  cloudinary,
-  params: {
-    folder: 'shwelucks-uploads',
-    allowed_formats: ['jpg', 'jpeg', 'png', 'webp']
+// 通用上传逻辑：传 page=home/news/events，更新对应 JSON
+const handleUpload = (pageName) => async (req, res) => {
+  try {
+    const { title, desc, link, index } = req.body;
+
+    const stream = cloudinary.uploader.upload_stream(
+      { folder: pageName },
+      async (error, result) => {
+        if (error) return res.status(500).json({ error });
+
+        const imageUrl = result.secure_url;
+
+        // 读取对应 JSON 文件
+        const filePath = path.join(__dirname, `../data/${pageName}.json`);
+        let list = [];
+
+        try {
+          list = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+        } catch (err) {
+          console.error('读取 JSON 出错，初始化为空数组');
+        }
+
+        // 确保 index 有效
+        const idx = Math.max(0, Math.min(Number(index), 2));
+
+        list[idx] = {
+          image: imageUrl,
+          title,
+          desc,
+          link
+        };
+
+        fs.writeFileSync(filePath, JSON.stringify(list, null, 2), 'utf-8');
+
+        res.json({ success: true, data: list[idx] });
+      }
+    );
+
+    req.file.stream.pipe(stream);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-});
+};
 
-const upload = multer({ storage });
-
-// 上传并更新 JSON 数据
-router.post('/upload/:section/:index', upload.single('image'), (req, res) => {
-  const section = req.params.section;
-  const index = parseInt(req.params.index, 10);
-  const { title, desc } = req.body;
-  let { link } = req.body;
-
-  if (!link.startsWith('http://') && !link.startsWith('https://')) {
-    link = `https://${link}`;
-  }
-
-  const jsonPath = path.join(__dirname, '..', 'data', `${section}.json`);
-  const imagePath = req.file.path; // Cloudinary 返回的 URL
-
-  // 读取原有 JSON 数据
-  let items = [];
-  if (fs.existsSync(jsonPath)) {
-    const raw = fs.readFileSync(jsonPath);
-    items = JSON.parse(raw);
-  }
-
-  // 更新或插入第 index 个项目
-  items[index] = { image: imagePath, title, desc, link };
-
-  // 保存回 JSON 文件
-  fs.writeFileSync(jsonPath, JSON.stringify(items, null, 2));
-
-  res.status(200).json({ success: true, message: '上传成功', imageUrl: imagePath });
-});
+// 三个上传接口
+router.post('/upload/home', upload.single('image'), handleUpload('home'));
+router.post('/upload/news', upload.single('image'), handleUpload('news'));
+router.post('/upload/events', upload.single('image'), handleUpload('events'));
 
 module.exports = router;

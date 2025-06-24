@@ -9,13 +9,14 @@ const homeRoutes = require('./routes/home');
 const uploadRoutes = require('./routes/upload');
 const newsRoutes = require('./routes/news');
 const eventsRoutes = require('./routes/events');
+const applyRoutes = require('./routes/apply');
+
 
 
 // 中间件
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use('/data', express.static('data'));
 
 
 // 例：直接在 server.js 或 routes/api.js 中添加
@@ -39,6 +40,8 @@ app.use('/api', homeRoutes);
 app.use('/api', uploadRoutes); 
 app.use('/api', newsRoutes);
 app.use('/api', eventsRoutes);
+app.use('/data', express.static('data'));
+app.use('/api', applyRoutes);
 // 启动服务
 const PORT = process.env.PORT || 3333;
 app.listen(PORT, () => {
