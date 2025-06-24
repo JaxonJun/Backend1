@@ -15,6 +15,7 @@ const eventsRoutes = require('./routes/events');
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use('/data', express.static('data'));
 
 
 // 例：直接在 server.js 或 routes/api.js 中添加
